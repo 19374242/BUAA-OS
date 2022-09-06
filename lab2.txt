@@ -1,0 +1,31 @@
+page2kva(struct Page **pp*)   得到页pp的虚地址
+page2ppn(struct Page **pp*)  得到页pp的物理页号
+page2pa(struct Page **pp*)  得到页pp的实地址
+pa2page(u_long *pa*)  得到实地址pa的页
+PPN(*va*)  得到实地址va的物理页号
+PDX(va) 可以获取虚拟地址 va 的 31-22 位， PTX(va) 可以获取虚拟地址 va 的 21-12 位。
+CPU 发出的地址均为虚拟地址，因此获取相关物理地址后，需要转换为虚拟地址再访问。对页表进行操作时处于内核态，因此使用宏 KADDR 即可。
+PTE_ADDR(pde) 后12位清零，得到二级页表物理地址
+20 #define PTE_G        0x0100    // 全局位
+21 #define PTE_V        0x0200    // 有效位
+22 #define PTE_R        0x0400    // 修改位，如果是0表示只对该页面进行过读操作，否则进行过写操作，要引发中断将内容写回内存
+23 #define PTE_D        0x0002    // 文件缓存的修改位dirt
+在进行内存初始化时，mips_detect_memory()、mips_vm_init()与page_init()被依次调用。mips_detect_memory()用来初始化一些全局变量（此处将物理内存大小设置为64MB，在实际中，内存大小是由硬件得到的，这里只是模拟了检测物理内存大小这个过程）。其余的函数的功能为：
+static void *alloc(u_int n, u_int align, int clear)：申请一块内存，返回首地址。
+static Pte *boot_pgdir_walk(Pde *pgdir, u_long va, int create)：从页目录项中找出虚拟地址va对应的页表项，若create置位，则不存在时创建。
+void boot_map_segment(Pde *pgdir, u_long va, u_long size, u_long pa, int perm)：将虚拟地址（va,va+size-1）映射到物理地址(pa,pa+size-1）。
+void mips_vm_init()：创建一个二级页表。
+void page_init(void)：将内存分页并初始化空闲页表。
+int page_alloc(struct Page **pp)：分配一页内存并把值赋给pp。
+void page_free(struct Page *pp)：释放一页内存。
+int pgdir_walk(Pde *pgdir, u_long va, int create, Pte **ppte)：建立起二级页表结构后从页目录中找到va对应页表项的函数。
+int page_insert(Pde *pgdir, struct Page *pp, u_long va, u_int perm)：将物理页pp映射到va。
+struct Page * page_lookup(Pde *pgdir, u_long va, Pte **ppte)：找到虚拟地址va对应的物理页面。
+void page_decref(struct Page *pp)：降低物理页面的引用次数，降到0后释放页面。
+void page_remove(Pde *pgdir, u_long va)：释放虚拟地址va对应的页面。
+void tlb_invalidate(Pde *pgdir, u_long va)：清空TLB中va对应的项。
+
+
+物理地址或上标志位，虚拟地址加偏移量得到相应地址（在mos中keseg0虚拟地址和物理地址只差前三位置不置0,所以虚拟地址加和物理地址加偏移量是一样的），传进来传出去的都是虚拟地址
+
+/OSLAB/gxemul -E testmips -C R3000 -M 64 gxemul/vmlinux

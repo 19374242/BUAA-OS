@@ -1,0 +1,37 @@
+env_free_list 空闲 env_sched_list[0]，env_sched_list[1] 两个链表调度函数
+env_runs;执行次数
+env_pgdir : 这个变量保存了该进程页目录的内核虚拟地址。
+env_cr3 : 这个变量保存了该进程页目录的物理地址。
+env_pri 优先级
+env_tf : Trapframe 结构体的定义在include/trap.h 中，在发生进程调度，或当陷入内核时，会将当时的进程上下文环境保存在env_tf变量中。
+
+
+int envid2env(u_int envid, struct Env **penv, int checkperm) 通过一个env 的id获取该id 对应的进程控制块
+env_setup_vm 初始化新进程的地址空间
+env_ alloc 创建进程
+load_icode_mapper 加载该段在ELF 文件中的所有内容到内存，如果该段在文件中的内容的大小达不到为填入这段内容新分配的页面大小，那么余下的部分用0来填充。
+load_elf 解析对应的elf文件并读取它进入内存
+load_icode 加载elf文件最最开始函数入口 load_icode调用load_elf调用load_icode_mapper
+env_create_priority 分配进程空间，load_icode，插入env_sched_list[0]
+env_create 调用env_create_priority
+env_run(struct Env *e)中断目前进程，执行e，恢复现场继续执行原进程
+lcontext(e->env_pgdir);设置全局变量mCONTEXT为当前进程页目录地址，这个值将在TLB重填时用到。
+env_pop_tf(&(e->env_tf),GET_ENV_ASID(e->env_id));恢复现场、异常返回。
+
+
+ENVX(envid) 大致意思就是envid相对于envs(开始的地方)的便宜数目（类似a[i]中i对于a）
+UTOP 用户所能操纵的地址空间的最大值；ULIM 操作系统分配给用户地址空间的最大值。
+
+typedef u_long Pde;
+typedef u_long Pte;
+ROUNDDOWN(va,BY2PG);意思应该是该地址页对齐所在小于该地址的最大位置
+bcopy((void *)(bin + i), (void *)page2kva(p), size); 前者赋值给后者
+
+
+/OSLAB/gxemul -E testmips -C R3000 -M 64 gxemul/vmlinux
+page2kva(struct Page **pp*)   得到页pp的虚地址
+page2ppn(struct Page **pp*)  得到页pp的物理页号
+page2pa(struct Page **pp*)  得到页pp的实地址
+pa2page(u_long *pa*)  得到实地址pa的页
+PPN(*va*)  得到实地址va的物理页号
+PDX(va) 可以获取虚拟地址 va 的 31-22 位， PTX(va) 可以获取虚拟地址 va 的 21-12 位。
